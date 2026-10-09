@@ -332,6 +332,14 @@ und eigene Presets (`persistentDataPath/Presets/*.json`, vollständiger Paramete
 Spielfeld-Panel (links), Navigation der Einstellungen, Auswertung (Taste G) und Hauptmenü-Karte begrenzen sich auf die Bildschirmhöhe und zeigen bei Bedarf eine
 vertikale Scrollleiste – aufgeklappte Untergruppen, Verhaltens-Chips und Diagramme bleiben so vollständig erreichbar.
 
+## 1i. Versionsverwaltung (Git)
+Repository: https://github.com/MichaelGBogen/Zellsimulation – Unity-Projekt im Unterordner `ZellSimulation/`.
+
+* **Unity einstellen:** *Project Settings › Version Control*: Mode = **Visible Meta Files**; *Editor › Asset Serialization* = **Force Text**.
+* **`.gitignore`** (im Projektordner): `Library`, `Temp`, `Obj`, `Logs`, `UserSettings`, Builds sowie die von Unity erzeugten `*.csproj`/`*.sln` werden nicht versioniert (Unity erzeugt sie neu).
+* **`.gitattributes`** (Repository-Wurzel): einheitliche Zeilenenden, Unity-YAML als Text; Bilder, Modelle, Audio, Schriften und DLLs als `binary`.
+  Bei vielen großen Dateien später auf **Git LFS** umstellen (Anleitung im Kopf der `.gitattributes`).
+
 ## 2. Ordnerstruktur
 
 ```
