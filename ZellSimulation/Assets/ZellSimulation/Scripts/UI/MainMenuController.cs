@@ -3,6 +3,7 @@
 // Copyright © 2026 Michael Bogen. Alle Rechte vorbehalten.
 // Datei: MainMenuController.cs
 // -----------------------------------------------------------------------------
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using ZellSimulation.Controls;
@@ -13,7 +14,7 @@ namespace ZellSimulation.UI
 {
     /// <summary>
     /// Hauptmenü (Szene ZS_MainMenu), komplett in UI Toolkit aufgebaut:
-    /// Logo, Titel, „Simulation starten“, „Einstellungen“ (Vollbild-Settings-Screen),
+    /// Logo, Titel, Szenario-Auswahl (Presets), „Simulation starten“, „Einstellungen“ (Vollbild-Settings-Screen),
     /// „Hilfe & Über ZellSimulation“ (Vollbild-Hilfe mit Beispielen, letztes Kapitel = Über),
     /// „Beenden“, Fußzeile mit Version und Copyright.
     /// Alle Bedienelemente zeigen Tooltips mit Erläuterung.
@@ -39,6 +40,7 @@ namespace ZellSimulation.UI
         HelpScreen _help;
         RuntimeTooltip _tooltip;
         Button _startButton;
+        DropdownField _presetField;
         float _startTime;
         bool _built, _leaving, _started;
 
@@ -94,9 +96,15 @@ namespace ZellSimulation.UI
             _root.Add(center);
 
             // --- Menü-Karte ---------------------------------------------------
-            VisualElement card = ZsUiKit.MakeCard(cardWidth, 34f);
-            card.style.alignItems = Align.Stretch;
-            center.Add(card);
+            VisualElement outerCard = ZsUiKit.MakeCard(cardWidth, 34f);
+            outerCard.style.alignItems = Align.Stretch;
+            outerCard.style.maxHeight = Length.Percent(92f);
+            center.Add(outerCard);
+            // Inhalt scrollt bei kleiner Fensterhöhe
+            var card = new ScrollView(ScrollViewMode.Vertical);
+            card.style.flexShrink = 1;
+            card.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            outerCard.Add(card);
 
             VisualElement logo = ZsUiKit.MakeIcon(icon, iconSize);
             logo.style.alignSelf = Align.Center;
@@ -112,6 +120,14 @@ namespace ZellSimulation.UI
             sub.style.marginBottom = 6;
             card.Add(sub);
             card.Add(ZsUiKit.MakeDivider(14f));
+
+            // Szenario (Preset) – wird sofort als gespeicherte Simulationswerte übernommen
+            _presetField = new DropdownField("Szenario", PresetChoices(), PresetIndex());
+            ZsUiKit.StyleField(_presetField);
+            if (_presetField.labelElement != null) _presetField.labelElement.style.minWidth = 90;
+            _presetField.RegisterValueChangedCallback(_ => OnPresetChosen(_presetField.index));
+            UpdatePresetTooltip();
+            card.Add(_presetField);
 
             _startButton = ZsUiKit.MakeButton("Simulation starten", StartSimulation, primary: true);
             _startButton.tooltip = "Startet eine neue Simulation mit den gespeicherten Einstellungen (Enter).\n" +
@@ -157,6 +173,53 @@ namespace ZellSimulation.UI
         }
 
         // =================================================================
+        //  Szenario (Presets)
+        // =================================================================
+        static List<string> PresetChoices()
+        {
+            var list = new List<string> { "Eigene Einstellungen" };
+            list.AddRange(PresetLibrary.Names);
+            return list;
+        }
+
+        static int PresetIndex()
+        {
+            string id = UserSettings.ActivePreset;
+            var all = PresetLibrary.All;
+            for (int i = 0; i < all.Count; i++) if (all[i].id == id) return i + 1;
+            return 0;
+        }
+
+        void OnPresetChosen(int index)
+        {
+            var all = PresetLibrary.All;
+            if (index <= 0) UserSettings.RestoreCustom();
+            else if (index - 1 < all.Count) UserSettings.ApplyPreset(all[index - 1]);
+            UpdatePresetTooltip();
+        }
+
+        void UpdatePresetTooltip()
+        {
+            if (_presetField == null) return;
+            int i = _presetField.index;
+            var all = PresetLibrary.All;
+            _presetField.tooltip = i > 0 && i - 1 < all.Count
+                ? PresetLibrary.Tooltip(all[i - 1]) + "\n\nWird beim Start übernommen. „Eigene Einstellungen“ stellt deine vorherigen Werte wieder her."
+                : "Szenario wählen: fertige Parametersätze wie „Pandemie“, „Friedliche Welt“, „Räuber & Beute“ oder „Ursuppe“.\n" +
+                  "„Eigene Einstellungen“ = die in den Einstellungen gespeicherten Werte" +
+                  (UserSettings.HasCustomBackup ? " (werden beim Zurückwechseln wiederhergestellt)." : ".");
+        }
+
+        /// <summary>Nach dem Schließen der Einstellungen: Liste und Auswahl aktualisieren (eigene Presets, Speichern).</summary>
+        void RefreshPresetField()
+        {
+            if (_presetField == null) return;
+            _presetField.choices = PresetChoices();
+            _presetField.SetValueWithoutNotify(_presetField.choices[Mathf.Clamp(PresetIndex(), 0, _presetField.choices.Count - 1)]);
+            UpdatePresetTooltip();
+        }
+
+        // =================================================================
         //  Aktionen
         // =================================================================
         void StartSimulation()
@@ -170,7 +233,7 @@ namespace ZellSimulation.UI
         void OpenSettings()
         {
             if (_settings != null) return;
-            _settings = new SettingsScreen(icon, null, () => { _settings = null; _startButton?.Focus(); });
+            _settings = new SettingsScreen(icon, null, () => { _settings = null; RefreshPresetField(); _startButton?.Focus(); });
             _root.Add(_settings);
             _tooltip?.BringToFront();
         }

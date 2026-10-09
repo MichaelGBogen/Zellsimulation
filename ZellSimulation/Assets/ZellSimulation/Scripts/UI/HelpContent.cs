@@ -220,8 +220,23 @@ namespace ZellSimulation.UI
                    "(Blue Marble, Black Marble) oder solarsystemscope.com/textures (auf NASA-Daten beruhend, Lizenz CC BY 4.0 – Quellenangabe nötig). " +
                    "Im Unity-Menü Tools › ZellSimulation › Erd-Texturen öffnet sich der Ordner mit einer Kurzanleitung.")
                 .H("Kamera")
-                .P("Die Kamera kreist um den Planeten. Zoomen bringt dich bis kurz über die Oberfläche; mit F (Kamera-Fokus) folgt sie einem " +
-                   "Lebewesen um die Kugel herum. Bei Pause stehen Sonne, Wolken, Wellen und Ursuppen still.")
+                .P("Die Kamera kreist um den Planeten. Das Mausrad zoomt bezogen auf die Höhe über der Oberfläche – mit Detailkarte bis auf " +
+                   "wenige hundert Meter. Nah am Boden drehen und verschieben sich die Ansichten entsprechend feiner, die Wolken blenden sich aus. " +
+                   "Mit F (Kamera-Fokus) folgt sie einem Lebewesen um die Kugel herum. Bei Pause stehen Sonne, Wolken, Wellen und Ursuppen still.")
+                .H("Detailkarte: Flüsse, Autobahnen, Straßen")
+                .P("Beim Heranzoomen lädt ZellSimulation für den sichtbaren Ausschnitt Kartenkacheln und legt sie passgenau auf die Erdkugel. " +
+                   "Je näher die Kamera, desto feiner die Zoomstufe – unten im Bild stehen Zoomstufe, Kamerahöhe und die Quellenangabe.")
+                .T(R("Zoomstufe", "Erkennbar"),
+                   R("6 – 8", "Länder, Gebirge, große Seen"),
+                   R("9 – 11", "Flüsse, Städte, Autobahnen"),
+                   R("12 – 14", "Hauptstraßen, Stadtteile"),
+                   R("15 – 18", "alle Straßen, Gebäude, Felder"))
+                .B("Quelle „Satellit + Straßen & Orte“ (Standard): Luftbild in echten Farben, darüber Autobahnen, Straßen und Ortsnamen.",
+                   "Quelle „OpenStreetMap“: klassische Straßenkarte mit Flüssen und Straßennamen (Kartenfarben).",
+                   "Geladene Kacheln werden zwischengespeichert (Arbeitsspeicher und Ordner KartenCache) – bekannte Gegenden erscheinen sofort.",
+                   "Ohne Internetverbindung bleibt die normale Erd-Textur sichtbar; unten erscheint ein Hinweis.")
+                .Tip("Die Erdkugel wird immer in realistischen Farben gezeigt – das Farbschema (Theme) färbt nur Menüs und Panels, nie den Planeten. " +
+                     "Detailkarte, Kartenquelle und max. Zoomstufe: Einstellungen › Grafik & Anzeige › Erdkugel – Detailkarte.")
                 .Tip("Planeten-Radius, Meerestiefe, Höhe der Luftschicht, Zahl und Größe der Ursuppen, Achsneigung, Jahreslänge, Nachtlichter, Wolken, " +
                      "Atmosphäre und Sterne: Einstellungen › Lebensbereiche."));
 
@@ -399,6 +414,21 @@ namespace ZellSimulation.UI
                    "„Speichern“ übernimmt die Werte dauerhaft; „Rückgängig“ stellt den Stand beim Öffnen wieder her.")
                 .P("Alle Einstellungen (Hauptmenü oder Button „Einstellungen“) enthalten zusätzlich Grafik, Steuerung, Darstellung und Werte, die " +
                    "erst nach einem Neustart wirken (mit * markiert, z. B. Start-Population oder Basen je Gen).")
+                .H("Presets (Szenarien)")
+                .P("Fertige Parametersätze lassen sich mit einem Klick laden: im Hauptmenü über „Szenario“ oder unter Einstellungen › Presets. " +
+                   "Ein Preset ändert nur die genannten Werte gegenüber den Standardwerten; alles andere bleibt Standard.")
+                .T(R("Preset", "Was passiert"),
+                   R("Standard", "Ausgewogene Grundeinstellung – alle Reiche koexistieren"),
+                   R("Pandemie", "Viele, schnell mutierende Virenstämme – das Immunsystem muss lernen"),
+                   R("Friedliche Welt", "Keine Viren, kaum Räuber, viel Nahrung, häufige Cluster"),
+                   R("Räuber & Beute", "Aggressive Jäger, knappe Nahrung – Populationen schwanken in Wellen"),
+                   R("Schnelle Evolution", "Hohe Mutations- und Artbildungsraten, kurze Generationen"),
+                   R("Ursuppe – Anfang des Lebens", "Nur Bakterien zu Beginn – alle anderen Reiche müssen erst entstehen"),
+                   R("Große Population / Leistungsschonend", "Mehr bzw. weniger Zellen, Nahrung und Viren je nach Rechner"))
+                .B("„Laden“ übernimmt die Werte sofort; Werte mit * wirken erst nach „Laden & neu starten“.",
+                   "„Als Preset speichern“ sichert ALLE aktuellen Werte als eigenes Preset (Benutzerordner, Unterordner Presets); eigene Presets lassen sich löschen.",
+                   "Wer im Hauptmenü von den eigenen Einstellungen zu einem Preset wechselt, bekommt sie über „Eigene Einstellungen“ zurück.",
+                   "Im Unity-Editor: Tools › ZellSimulation › Presets als Assets anlegen erzeugt die Szenarien als ScriptableObjects (Resources/Presets) zum Bearbeiten im Inspector.")
                 .H("Rezepte")
                 .T(R("Ziel", "Änderungen"),
                    R("Schnellere Evolution", "Mutationsrate 0,2 · Artbildungs-Chance 0,15 · Generationen je Stufe 2"),
@@ -411,7 +441,8 @@ namespace ZellSimulation.UI
                    "Wald, Labor (hell) und Hoher Kontrast. Alle Schemata sind auf gute Lesbarkeit geprüft (Textkontrast mindestens 4,5 : 1). " +
                    "Das Schema wirkt sofort – wie alle Einstellungen (Live-Vorschau). „Speichern“ sichert sie dauerhaft, " +
                    "„Verwerfen“ stellt den zuletzt gespeicherten Stand wieder her.")
-                .Tip("Die Einstellungen werden in settings.json gespeichert (Pfad siehe „Über ZellSimulation“)."));
+                .Tip("Die Einstellungen werden in settings.json gespeichert (Pfad siehe „Über ZellSimulation“). " +
+                     "Alle Listen und Panels mit vielen Einträgen (z. B. aufgeklappte Untergruppen im Spielfeld-Panel) haben bei Bedarf eine vertikale Scrollleiste."));
 
             // ------------------------------------------------------------------
             list.Add(new HelpChapter { title = "Über ZellSimulation", summary = "Version, Technik und Copyright" });

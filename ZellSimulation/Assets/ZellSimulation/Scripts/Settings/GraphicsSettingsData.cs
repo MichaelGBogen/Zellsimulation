@@ -97,6 +97,26 @@ namespace ZellSimulation.Settings
                  "Spart sehr viel Rechenzeit; die Bewegungen werden minimal gröber.")]
         public bool adaptivePhysicsStep = true;
 
+        // Erdkugel – Detailkarte (eigener Abschnitt im Reiter „Grafik & Anzeige“)
+        [Label("Detailkarte beim Heranzoomen")]
+        [Tooltip("Lädt beim Heranzoomen an die Erdkugel Kartenkacheln (Satellitenbild, Straßen, Orte) für den sichtbaren Ausschnitt " +
+                 "und legt sie passgenau auf die Oberfläche. Auf der letzten Zoomstufe sind Flüsse, Autobahnen und Straßen erkennbar. " +
+                 "Benötigt eine Internetverbindung; geladene Kacheln werden zwischengespeichert. Aus = nur die Erd-Textur (bis ca. 10 km je Pixel).")]
+        public bool detailMap = true;
+
+        [Label("Kartenquelle")]
+        [Tooltip("Satellit + Straßen & Orte (Esri): realistische Farben, Autobahnen, Straßen und Ortsnamen darüber. " +
+                 "Satellit: nur das Luftbild. OpenStreetMap: Straßenkarte (Kartenfarben). Quellenangabe erscheint unten im Bild.")]
+        public int detailMapSource = 0;
+
+        [Label("Max. Zoomstufe der Karte")]
+        [Tooltip("Feinste Kachelstufe (Web-Mercator): 12 ≈ Städte, 14 ≈ Hauptstraßen, 16 ≈ alle Straßen, 18 ≈ einzelne Gebäude. " +
+                 "Höher = schärfer beim nahen Heranzoomen, aber mehr Downloads.")]
+        [Range(8, 19)] public int detailMapMaxZoom = 18;
+
+        [Label("Karten-Kacheln auf der Festplatte puffern")]
+        [Tooltip("Speichert geladene Kacheln im Benutzerordner (KartenCache). Spart Downloads und lädt bekannte Gegenden sofort.")]
+        public bool detailMapDiskCache = true;
     }
 
     /// <summary>Steuerung & Hilfe.</summary>

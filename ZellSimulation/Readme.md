@@ -298,6 +298,40 @@ Menü *Tools ▸ ZellSimulation ▸ Erd-Texturen*. Ohne Dateien entsteht eine er
 *Grafik & Anzeige*: FPS-Anzeige (F3), Landschafts-Qualität, max. Physik-Schritte pro Bild, größere Physik-Schritte im Zeitraffer.
 *Lebensbereiche*: Kapazität je Bereich (Anteil an der max. Population) gegen Gedränge.
 
+### Detailkarte beim Heranzoomen (`World/PlanetDetailMap.cs`, AP-71)
+Das Mausrad zoomt auf der Erdkugel bezogen auf die **Höhe über der Oberfläche** – mit Detailkarte bis ca. 600 m (Radius × 10⁻⁴).
+Für den sichtbaren Ausschnitt werden Web-Mercator-Kacheln geladen (Zoomstufe so, dass ein Kachelpixel ≈ ein Bildschirmpixel):
+ab Stufe 6 Länder, 9–11 Flüsse/Städte/Autobahnen, 12–14 Hauptstraßen, 15–18 alle Straßen und Gebäude.
+
+| Quelle (*Grafik & Anzeige › Erdkugel – Detailkarte*) | Inhalt |
+|---|---|
+| Satellit + Straßen & Orte (Esri, Standard) | World Imagery (echte Farben) + World Transportation + Boundaries & Places, auf der CPU überlagert |
+| Satellit (Esri) | nur Luftbild |
+| OpenStreetMap | Straßenkarte (Kartenfarben) |
+
+* Jede Kachel ist ein eigenes Netz, das exakt der gezeichneten Erdoberfläche folgt (`PlanetEnvironment.MeshRadius`, gleiche Dreiecks-Interpolation) plus wenige Meter; Land wird über den Meeresspiegel gehoben, reine Ozean-Kacheln werden nicht geladen.
+* Während eine Kachel lädt, zeigt sie den passenden Ausschnitt der nächstgröberen geladenen Kachel; 404 bzw. „Keine Daten“-Platzhalter → gröbere Kachel bleibt.
+* Max. 6 Downloads parallel, eigener User-Agent, LRU-Speicher (700 Kacheln, DXT-komprimiert) und optional `persistentDataPath/KartenCache`.
+* Quellenangabe, Zoomstufe und Kamerahöhe stehen unten im Bild. Ohne Internet bleibt die 4K-Erdtextur sichtbar (Hinweis im Bild).
+* Kamera (`OrbitCamera`): Winkel in doppelter Genauigkeit, Dreh-/Verschiebe-/Auto-Rotations-Tempo ∝ Höhe, nahe Clipping-Ebene folgt der Höhe; Wolken blenden sich beim Heranzoomen aus.
+* **Farben:** Die Erdkugel nutzt feste, realistische Farben (`EarthPalette`) – unabhängig vom Farbschema der Oberfläche.
+
+## 1g. Presets / Szenarien (AP-22)
+
+`Settings/SimulationPreset.cs` (ScriptableObject) beschreibt ein Szenario als Liste von Änderungen gegenüber den Standardwerten
+(`virus.outbreakInterval = 25`, `kingdoms[*].aggressionMultiplier = *1.8`, `kingdoms[Bacterium].founderShare = 1`, `dna.aggression = 0;0.4`).
+`Settings/PresetLibrary.cs` liefert die eingebauten Szenarien **Standard, Pandemie, Friedliche Welt, Räuber & Beute, Schnelle Evolution,
+Ursuppe – Anfang des Lebens, Große Population, Leistungsschonend**, lädt Preset-Assets aus `Resources/Presets` (gleiche `id` ersetzt das eingebaute)
+und eigene Presets (`persistentDataPath/Presets/*.json`, vollständiger Parametersatz).
+
+* **Hauptmenü › Szenario**: übernimmt das Preset als gespeicherte Simulationswerte; „Eigene Einstellungen“ stellt die vorherigen Werte wieder her.
+* **Einstellungen › Presets (Szenarien)**: Karten mit Beschreibung und Änderungsliste, „Laden“, im Spielfeld zusätzlich „Laden & neu starten“, „Als Preset speichern“, „Löschen“ (eigene).
+* **Editor**: *Tools ▸ ZellSimulation ▸ Presets als Assets anlegen* (auch Teil von „Komplett einrichten“) erzeugt die Szenarien als Assets zum Bearbeiten im Inspector; *Create ▸ ZellSimulation ▸ Simulations-Preset* legt ein neues an.
+
+## 1h. Scrollbars (AP-72)
+Spielfeld-Panel (links), Navigation der Einstellungen, Auswertung (Taste G) und Hauptmenü-Karte begrenzen sich auf die Bildschirmhöhe und zeigen bei Bedarf eine
+vertikale Scrollleiste – aufgeklappte Untergruppen, Verhaltens-Chips und Diagramme bleiben so vollständig erreichbar.
+
 ## 2. Ordnerstruktur
 
 ```

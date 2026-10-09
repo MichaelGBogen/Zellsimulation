@@ -55,6 +55,7 @@ namespace ZellSimulation.EditorTools
         {
             CreateAssets();
             ZellSimulationMenuSetup.SetupMenuAndLoading();
+            PresetAssetExporter.ExportBuiltIns();
         }
 
         [MenuItem("Tools/ZellSimulation/1. Assets & Prefabs erzeugen", priority = 20)]

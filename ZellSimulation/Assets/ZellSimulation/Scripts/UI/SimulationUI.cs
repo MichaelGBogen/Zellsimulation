@@ -238,6 +238,7 @@ namespace ZellSimulation.UI
             _panel.style.left = 12;
             _panel.style.top = 12;
             _panel.style.width = panelWidth;
+            _panel.style.maxHeight = Length.Percent(97f); // Inhalt scrollt, wenn er nicht auf den Bildschirm passt
             _panel.style.paddingLeft = 12;
             _panel.style.paddingRight = 12;
             _panel.style.paddingTop = 10;
@@ -271,7 +272,13 @@ namespace ZellSimulation.UI
             header.Add(_toggleButton);
             _panel.Add(header);
 
-            _body = new VisualElement();
+            // Inhalt in einer vertikalen Scroll-Ansicht: aufgeklappte Untergruppen, Verhaltens-Chips und
+            // Diagramme bleiben auch auf kleinen Bildschirmen vollständig erreichbar.
+            var bodyScroll = new ScrollView(ScrollViewMode.Vertical);
+            bodyScroll.style.flexShrink = 1;
+            bodyScroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            bodyScroll.verticalScrollerVisibility = ScrollerVisibility.Auto;
+            _body = bodyScroll;
             _body.style.display = startExpanded ? DisplayStyle.Flex : DisplayStyle.None;
             _panel.Add(_body);
 

@@ -18,7 +18,11 @@
 //      prozedural), dreht langsam.
 //    • Atmosphäre: bläulicher Leuchtsaum (Billboard), Sonnenscheibe,
 //      Sternenhimmel; Kamera-Hintergrund Schwarz (Weltraum), Nebel aus.
+//    • Detailkarte: beim Heranzoomen Kartenkacheln (Satellit, Straßen, Orte)
+//      passgenau auf der Oberfläche (PlanetDetailMap).
 //  Die Sonne (Richtungslicht) wird vom SimulationManager gedreht.
+//  Alle Farben der Erdkugel sind realistisch und fest (EarthPalette) – sie
+//  hängen bewusst NICHT vom Farbschema (Theme) der Oberfläche ab.
 // -----------------------------------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -28,8 +32,30 @@ using ZellSimulation.Simulation;
 
 namespace ZellSimulation.World
 {
+    /// <summary>
+    /// Realistische, feste Farben der Erdkugel. Absichtlich unabhängig vom
+    /// Farbschema der Oberfläche (ZsTheme) – die Erde sieht immer aus wie die Erde.
+    /// </summary>
+    public static class EarthPalette
+    {
+        public static readonly Color DeepOcean = new Color(0.02f, 0.09f, 0.24f);
+        public static readonly Color ShallowOcean = new Color(0.08f, 0.32f, 0.46f);
+        public static readonly Color OceanSurface = new Color(0.02f, 0.13f, 0.27f, 0.62f);
+        public static readonly Color Tropic = new Color(0.12f, 0.32f, 0.10f);
+        public static readonly Color Desert = new Color(0.72f, 0.61f, 0.40f);
+        public static readonly Color Temperate = new Color(0.22f, 0.40f, 0.15f);
+        public static readonly Color Boreal = new Color(0.12f, 0.24f, 0.13f);
+        public static readonly Color Tundra = new Color(0.46f, 0.43f, 0.36f);
+        public static readonly Color Ice = new Color(0.92f, 0.94f, 0.97f);
+        public static readonly Color Soup = new Color(0.40f, 0.38f, 0.12f, 0.8f);
+        public static readonly Color Rock = new Color(0.12f, 0.10f, 0.09f);
+    }
+
     public sealed class PlanetEnvironment : MonoBehaviour
     {
+        /// <summary>Aktuell dargestellte Erdkugel (null ohne Erdkugel).</summary>
+        public static PlanetEnvironment Active { get; private set; }
+
         SimulationManager _m;
         PlanetWorld _p;
         HabitatSettings _s;
@@ -49,6 +75,12 @@ namespace ZellSimulation.World
 
         // Höhenfeld (geglättete Landmaske)
         float[] _landSmooth;
+
+        // Radien der Erd-Mesh-Eckpunkte (für passgenaue Detailkarte und Kamera)
+        float[] _earthRadii;
+        int _earthLatN;
+        Material _cloudMat;
+        float _cloudRadius;
 
         // Objekte
         Material _oceanMat, _soupMat, _earthMat;
@@ -97,12 +129,17 @@ namespace ZellSimulation.World
             if (_s.atmosphere) BuildHaloAndSun();
             if (_s.stars) BuildStars();
             SetupSpace();
+            BuildDetailMap();
             _built = true;
+            Active = this;
         }
 
         void Clear()
         {
             _built = false;
+            if (Active == this) Active = null;
+            _earthRadii = null;
+            _cloudMat = null;
             for (int i = transform.childCount - 1; i >= 0; i--) Destroy(transform.GetChild(i).gameObject);
             foreach (Object o in _owned) if (o != null) Destroy(o);
             _owned.Clear();
@@ -254,6 +291,39 @@ namespace ZellSimulation.World
             return Mathf.Lerp(Mathf.Lerp(v00, v10, tx), Mathf.Lerp(v01, v11, tx), ty);
         }
 
+        /// <summary>Geglätteter Landanteil (0 = Wasser … 1 = Land) in einer Richtung.</summary>
+        public float LandShare(Vector3 dir) => _landSmooth != null ? LandAt(dir) : 0f;
+
+        /// <summary>Planet der Darstellung.</summary>
+        public PlanetWorld Planet => _p;
+
+        /// <summary>Radius der Meeresoberfläche (Wasserkugel).</summary>
+        public float OceanRadius => _p != null ? _p.Radius - 0.25f : 0f;
+
+        /// <summary>Breite einer Masche des Erd-Meshes in Grad.</summary>
+        public float EarthQuadDeg => _earthLatN > 0 ? 180f / _earthLatN : 2f;
+
+        /// <summary>
+        /// Radius der tatsächlich gezeichneten Erdoberfläche in einer Richtung – exakt wie
+        /// das Dreiecksnetz interpoliert (Detailkarte liegt damit nie unter der Oberfläche).
+        /// </summary>
+        public float MeshRadius(Vector3 dir)
+        {
+            if (_earthRadii == null || _earthLatN <= 0) return _p != null ? SurfaceRadius(dir) : 0f;
+            PlanetWorld.LatLon(dir, out float lat, out float lon);
+            int latN = _earthLatN, lonN = latN * 2, row = lonN + 1;
+            float fy = Mathf.Clamp((lat + 90f) / 180f * latN, 0f, latN - 1e-4f);
+            float fx = Mathf.Clamp((lon + 180f) / 360f * lonN, 0f, lonN - 1e-4f);
+            int x0 = (int)fx, y0 = (int)fy;
+            float tx = fx - x0, ty = fy - y0;
+            float ra = _earthRadii[y0 * row + x0], rb = _earthRadii[y0 * row + x0 + 1];
+            float rc = _earthRadii[(y0 + 1) * row + x0], rd = _earthRadii[(y0 + 1) * row + x0 + 1];
+            // Dreiecke (a, c, b) und (b, c, d) – Diagonale b–c wie in SphereMesh
+            return tx + ty <= 1f
+                ? ra + (rb - ra) * tx + (rc - ra) * ty
+                : rd + (rc - rd) * (1f - tx) + (rb - rd) * (1f - ty);
+        }
+
         /// <summary>Radius der Oberfläche in einer Richtung (Land, Meeresboden, Krater).</summary>
         float SurfaceRadius(Vector3 dir)
         {
@@ -333,11 +403,20 @@ namespace ZellSimulation.World
             Texture2D day = EarthTextures.Load(EarthTextures.DayName);
             if (day == null) day = ProceduralDayTexture();
             else day.wrapModeU = TextureWrapMode.Repeat;
+            day.anisoLevel = 8; // schärfer bei schrägem Blick über die Oberfläche
 
             // Nachtlichter
             Texture2D night = _s.nightLights ? BuildNightTexture() : null;
 
-            Mesh mesh = SphereMesh("ZS_Earth", EarthLat, d => SurfaceRadius(d));
+            _earthLatN = EarthLat;
+            _earthRadii = new float[(_earthLatN + 1) * (_earthLatN * 2 + 1)];
+            int vi = 0;
+            Mesh mesh = SphereMesh("ZS_Earth", EarthLat, d =>
+            {
+                float r = SurfaceRadius(d);
+                _earthRadii[vi++] = r; // SphereMesh läuft zeilenweise (Süd → Nord, West → Ost) wie der Index
+                return r;
+            });
             _earthMat = Lit(Color.white, 0.22f, albedo: day, emissiveMap: night,
                             emissive: night != null ? (Color?)Nits(Color.white, _s.nightLightNits) : null);
             GameObject go = Part("Erdoberfläche", mesh, _earthMat, transform, _p.Center, Vector3.one, Quaternion.identity, true);
@@ -361,13 +440,12 @@ namespace ZellSimulation.World
                     Color c;
                     if (land < 0.5f)
                     {
-                        c = Color.Lerp(new Color(0.02f, 0.09f, 0.24f), new Color(0.08f, 0.32f, 0.46f), Mathf.InverseLerp(0.05f, 0.5f, land));
+                        c = Color.Lerp(EarthPalette.DeepOcean, EarthPalette.ShallowOcean, Mathf.InverseLerp(0.05f, 0.5f, land));
                     }
                     else
                     {
-                        Color tropic = new Color(0.12f, 0.32f, 0.10f), desert = new Color(0.72f, 0.61f, 0.40f),
-                              temperate = new Color(0.22f, 0.40f, 0.15f), boreal = new Color(0.12f, 0.24f, 0.13f),
-                              tundra = new Color(0.46f, 0.43f, 0.36f);
+                        Color tropic = EarthPalette.Tropic, desert = EarthPalette.Desert, temperate = EarthPalette.Temperate,
+                              boreal = EarthPalette.Boreal, tundra = EarthPalette.Tundra;
                         if (alat < 14f) c = tropic;
                         else if (alat < 34f) c = Color.Lerp(tropic, desert, Mathf.InverseLerp(14f, 24f, alat) * (n > 0.45f ? 1f : 0.4f));
                         else if (alat < 52f) c = temperate;
@@ -375,7 +453,7 @@ namespace ZellSimulation.World
                         else c = tundra;
                         c = Color.Lerp(c, c * 0.7f, Mathf.Max(0f, n - 0.55f) * 2f);
                     }
-                    if (alat > 72f + (n - 0.5f) * 8f) c = new Color(0.92f, 0.94f, 0.97f);
+                    if (alat > 72f + (n - 0.5f) * 8f) c = EarthPalette.Ice;
                     c.a = 1f;
                     px[y * w + x] = c;
                 }
@@ -484,7 +562,7 @@ namespace ZellSimulation.World
         void BuildOcean()
         {
             Texture2D waves = WaveNormalMap(256, 1f);
-            _oceanMat = Lit(new Color(0.03f, 0.20f, 0.40f, 0.72f), 0.93f, transparent: true, normalMap: waves);
+            _oceanMat = Lit(EarthPalette.OceanSurface, 0.93f, transparent: true, normalMap: waves);
             _oceanMat.SetTextureScale("_BaseColorMap", new Vector2(64f, 32f));
             float r = _p.Radius - 0.25f;
             Mesh mesh = SphereMesh("ZS_Ocean", OceanLat, d => r);
@@ -541,10 +619,10 @@ namespace ZellSimulation.World
             Transform g = new GameObject("Ursuppen").transform;
             g.SetParent(transform, false);
             Texture2D ripples = WaveNormalMap(128, 2f);
-            _soupMat = Lit(new Color(0.40f, 0.38f, 0.12f, 0.8f), 0.9f, transparent: true,
+            _soupMat = Lit(EarthPalette.Soup, 0.9f, transparent: true,
                            emissive: Nits(new Color(0.55f, 0.30f, 0.06f), 14f), normalMap: ripples);
             _soupMat.SetTextureScale("_BaseColorMap", new Vector2(6f, 6f));
-            Material ventRock = Lit(new Color(0.12f, 0.10f, 0.09f), 0.3f);
+            Material ventRock = Lit(EarthPalette.Rock, 0.3f);
             Material glow = Lit(new Color(1f, 0.5f, 0.15f), 0.6f, emissive: Nits(new Color(1f, 0.45f, 0.12f), 2500f));
             Material bubbleMat = Lit(new Color(0.85f, 0.90f, 0.55f, 0.45f), 0.95f, transparent: true, emissive: Nits(new Color(0.8f, 0.7f, 0.3f), 30f));
             Material steamMat = Lit(new Color(0.92f, 0.92f, 0.88f, 0.25f), 0.1f, transparent: true);
@@ -658,7 +736,9 @@ namespace ZellSimulation.World
             tex.Apply(true, false);
 
             Material mat = Lit(Color.white, 0.05f, transparent: true, albedo: tex);
+            _cloudMat = mat;
             float r = _p.AirMin + (_p.AirMax - _p.AirMin) * 0.55f;
+            _cloudRadius = r;
             Mesh mesh = SphereMesh("ZS_Clouds", _level >= 2 ? 64 : 40, d => r);
             _clouds = Part("Wolken", mesh, mat, transform, _p.Center, Vector3.one, Quaternion.identity, false).transform;
         }
@@ -753,6 +833,14 @@ namespace ZellSimulation.World
             _volume.sharedProfile = profile;
         }
 
+        // ================================================================== Detailkarte
+        void BuildDetailMap()
+        {
+            var go = new GameObject("Detailkarte");
+            go.transform.SetParent(transform, false);
+            go.AddComponent<PlanetDetailMap>().Init(this);
+        }
+
         // ================================================================== Animation
         void Update()
         {
@@ -799,6 +887,14 @@ namespace ZellSimulation.World
                 _sunGlow.SetPositionAndRotation(pos, Quaternion.LookRotation(pos - camPos, cam.transform.up));
             }
             if (_stars != null) _stars.position = camPos; // Sterne ohne Parallaxe
+            if (_cloudMat != null)
+            {
+                // Beim Heranzoomen die Wolken ausblenden, damit der Blick auf Landschaft und Detailkarte frei ist
+                float camR = (camPos - _p.Center).magnitude;
+                float a = Mathf.InverseLerp(_cloudRadius + 1.5f, _cloudRadius + 12f, camR);
+                _cloudMat.SetColor(BaseColorId, new Color(1f, 1f, 1f, a));
+                if (_clouds != null) _clouds.gameObject.SetActive(a > 0.01f);
+            }
         }
 
         void AnimateSoups(float time, float dt)

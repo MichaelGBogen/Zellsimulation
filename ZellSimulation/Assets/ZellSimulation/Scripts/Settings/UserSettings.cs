@@ -25,6 +25,11 @@ namespace ZellSimulation.Settings
             public ControlSettingsData controls = new ControlSettingsData();
             public bool hasSimulation;
             public SimulationConfig simulation = new SimulationConfig();
+            /// <summary>Kennung des geladenen Presets ("" = eigene Einstellungen).</summary>
+            public string activePreset = "";
+            /// <summary>Gesicherte eigene Einstellungen (vor dem ersten Laden eines Presets).</summary>
+            public bool hasCustomBackup;
+            public SimulationConfig customBackup = new SimulationConfig();
         }
 
         static FileData s_Data;
@@ -77,6 +82,8 @@ namespace ZellSimulation.Settings
             if (s_Data.graphics == null) s_Data.graphics = new GraphicsSettingsData();
             if (s_Data.controls == null) s_Data.controls = new ControlSettingsData();
             if (s_Data.simulation == null) { s_Data.simulation = new SimulationConfig(); s_Data.hasSimulation = false; }
+            if (s_Data.activePreset == null) s_Data.activePreset = "";
+            if (s_Data.customBackup == null) { s_Data.customBackup = new SimulationConfig(); s_Data.hasCustomBackup = false; }
             KingdomSettings.FixLegendColors(s_Data.simulation.kingdoms);
             KingdomSettings.ApplyBalanceDefaults(s_Data.simulation.kingdoms);
         }
@@ -106,6 +113,57 @@ namespace ZellSimulation.Settings
             if (cfg == null) { Data.hasSimulation = false; return; }
             Data.simulation = cfg.Clone();
             Data.hasSimulation = true;
+        }
+
+        // =================================================================
+        //  Presets (AP-22)
+        // =================================================================
+        /// <summary>Kennung des aktiven Presets ("" = eigene Einstellungen).</summary>
+        public static string ActivePreset => Data.activePreset ?? "";
+
+        public static bool HasCustomBackup => Data.hasCustomBackup;
+
+        /// <summary>
+        /// Simulationswerte übernehmen und merken, ob sie einem Preset entsprechen.
+        /// Beim Wechsel von eigenen Einstellungen zu einem Preset werden die eigenen
+        /// Werte gesichert (wiederherstellbar über <see cref="RestoreCustom"/>).
+        /// </summary>
+        public static void CommitSimulation(SimulationConfig cfg, string presetId)
+        {
+            presetId ??= "";
+            if (presetId.Length > 0 && ActivePreset.Length == 0 && Data.hasSimulation)
+            {
+                Data.customBackup = Data.simulation.Clone();
+                Data.hasCustomBackup = true;
+            }
+            else if (presetId.Length == 0)
+            {
+                // Eigene (geänderte) Werte ersetzen die Sicherung
+                Data.hasCustomBackup = false;
+                Data.customBackup = new SimulationConfig();
+            }
+            SetSimulation(cfg);
+            Data.activePreset = presetId;
+        }
+
+        /// <summary>Preset als gespeicherte Simulationswerte übernehmen (Hauptmenü) und speichern.</summary>
+        public static void ApplyPreset(SimulationPreset preset)
+        {
+            if (preset == null) return;
+            CommitSimulation(preset.Build(Simulation), preset.id);
+            Save();
+        }
+
+        /// <summary>Zurück zu den eigenen Einstellungen (vor dem ersten Preset) und speichern.</summary>
+        public static void RestoreCustom()
+        {
+            if (ActivePreset.Length == 0) return;
+            if (Data.hasCustomBackup) SetSimulation(Data.customBackup);
+            else ClearSimulation();
+            Data.hasCustomBackup = false;
+            Data.customBackup = new SimulationConfig();
+            Data.activePreset = "";
+            Save();
         }
 
         /// <summary>Simulation-Parameter verwerfen → wieder die Werte aus der Szene verwenden.</summary>

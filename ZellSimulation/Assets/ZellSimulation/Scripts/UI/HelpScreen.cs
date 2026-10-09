@@ -321,7 +321,9 @@ namespace ZellSimulation.UI
             Label credits = Text("Erd-Texturen: NASA Blue Marble (Tag) und NASA Black Marble (Nachtlichter), NASA Earth Observatory – gemeinfrei; " +
                                  "Wolken: turban/webgl-earth (Bjørn Sandvik, auf Basis von NASA-Bildern); bezogen über das npm-Paket three-globe " +
                                  "(Vasco Asturiano, MIT-Lizenz). Details: Assets/ZellSimulation/Resources/Earth/QUELLEN_Erdtexturen.txt. " +
-                                 "Ohne Texturen wird eine erdähnliche Kugel prozedural erzeugt.", 12, ZsUiKit.TextMuted);
+                                 "Ohne Texturen wird eine erdähnliche Kugel prozedural erzeugt. " +
+                                 "Detailkarte (online, beim Heranzoomen): Luftbild © Esri, Maxar, Earthstar Geographics und GIS-Nutzergemeinschaft; " +
+                                 "Straßen & Orte © Esri, HERE, Garmin; Karte © OpenStreetMap-Mitwirkende (ODbL).", 12, ZsUiKit.TextMuted);
             credits.style.marginTop = 6;
             p.Add(credits);
 

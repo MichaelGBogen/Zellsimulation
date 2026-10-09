@@ -12,6 +12,7 @@ using ZellSimulation.Genetics;
 using ZellSimulation.Controls;
 using ZellSimulation.Settings;
 using ZellSimulation.Simulation;
+using ZellSimulation.World;
 
 namespace ZellSimulation.UI
 {
@@ -19,7 +20,8 @@ namespace ZellSimulation.UI
     /// Vollbild-Einstellungen (UI Toolkit), nutzbar aus dem Hauptmenü und während
     /// der Simulation. Kategorien links, Formular rechts, Aktionen unten.
     ///
-    ///   • Grafik & Anzeige, Steuerung & Hilfe
+    ///   • Grafik & Anzeige (inkl. Detailkarte der Erdkugel), Steuerung & Hilfe
+    ///   • Presets: fertige Szenarien laden, eigene Presets speichern/löschen
     ///   • ALLE Simulationsparameter (Population, Evolution, Reiche, Energie,
     ///     Verhalten, Cluster, Nahrung, Umwelt, Immunsystem, Viren, Darstellung, Statistik)
     ///
@@ -59,6 +61,8 @@ namespace ZellSimulation.UI
         VisualElement _confirmLayer;
         Tab _current;
         bool _dirty;
+        string _presetId;       // zuletzt geladenes Preset (Kandidat für „aktiv“ beim Speichern)
+        string _savedPresetId;
 
         /// <param name="manager">Laufende Simulation (null im Hauptmenü).</param>
         public SettingsScreen(Texture2D icon, SimulationManager manager, Action onClose, Action onLiveApplied = null)
@@ -94,6 +98,7 @@ namespace ZellSimulation.UI
             if (_manager != null) _sim = _manager.ExportConfig();
             else if (UserSettings.Simulation != null) _sim = UserSettings.Simulation.Clone();
             else _sim = new SimulationConfig();
+            _presetId = UserSettings.ActivePreset;
             TakeSnapshot();
         }
 
@@ -101,7 +106,9 @@ namespace ZellSimulation.UI
         {
             _savedGraphics = Clone(UserSettings.Graphics);
             _savedControls = Clone(UserSettings.Controls);
-            _savedSim = _manager != null ? _manager.ExportConfig() : null;
+            _savedSim = _manager != null ? _manager.ExportConfig()
+                      : UserSettings.Simulation != null ? UserSettings.Simulation.Clone() : new SimulationConfig();
+            _savedPresetId = UserSettings.ActivePreset;
         }
 
         // =================================================================
@@ -202,6 +209,10 @@ namespace ZellSimulation.UI
                     ZsInput.ResetAll();
                     _controls.bindingOverrides = "";
                 });
+
+            AddTab("presets", "Presets (Szenarien)",
+                "Fertige Szenarien wie „Pandemie“, „Friedliche Welt“ oder „Ursuppe“ mit einem Klick laden – oder die aktuellen Werte als eigenes Preset speichern.",
+                BuildPresetTab, null);
 
             AddTab("population", "Population & Evolution",
                 "Startpopulation, Obergrenze, globale Geburtenrate, Mutationsrate und -intensität, Paarungsregeln.",
@@ -312,10 +323,13 @@ namespace ZellSimulation.UI
             body.style.minHeight = 0f;
             Add(body);
 
-            var nav = new VisualElement();
+            // Kategorien in einer Scroll-Ansicht: auch bei kleiner Fensterhöhe sind alle erreichbar
+            var nav = new ScrollView(ScrollViewMode.Vertical);
             nav.style.width = 270;
             nav.style.flexShrink = 0f;
             nav.style.marginRight = 22;
+            nav.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            nav.verticalScrollerVisibility = ScrollerVisibility.Auto;
             foreach (Tab t in _tabs)
             {
                 Tab tab = t;
@@ -449,6 +463,20 @@ namespace ZellSimulation.UI
             AddDropdown(p, gt, nameof(GraphicsSettingsData.environmentQuality),
                 new List<string> { "Aus", "Niedrig", "Mittel", "Hoch" }, _graphics.environmentQuality, i => _graphics.environmentQuality = i);
 
+            p.Add(SettingsFormBuilder.MakeHeader("Erdkugel – Detailkarte"));
+            Label mapHint = ZsUiKit.MakeText(
+                "Beim Heranzoomen an die Erdkugel werden Kartenkacheln für den sichtbaren Ausschnitt geladen – auf der letzten Zoomstufe " +
+                "sind Flüsse, Autobahnen und Straßen erkennbar (Internetverbindung nötig). Die Erdkugel wird immer in realistischen Farben " +
+                "dargestellt, unabhängig vom Farbschema der Oberfläche.", 12, ZsUiKit.TextMuted);
+            mapHint.style.whiteSpace = WhiteSpace.Normal;
+            mapHint.style.marginBottom = 4;
+            p.Add(mapHint);
+            AddToggle(p, gt, nameof(GraphicsSettingsData.detailMap), _graphics.detailMap, v => _graphics.detailMap = v);
+            AddDropdown(p, gt, nameof(GraphicsSettingsData.detailMapSource), new List<string>(PlanetDetailMap.SourceNames),
+                _graphics.detailMapSource, i => _graphics.detailMapSource = i);
+            SettingsFormBuilder.Build(p, _graphics, MarkDirty,
+                f => f.Name == nameof(GraphicsSettingsData.detailMapMaxZoom) || f.Name == nameof(GraphicsSettingsData.detailMapDiskCache));
+
             p.Add(SettingsFormBuilder.MakeHeader("Bild & Effekte"));
             // Restliche Felder (Slider/Schalter) automatisch
             var handled = new HashSet<string>
@@ -457,6 +485,8 @@ namespace ZellSimulation.UI
                 nameof(GraphicsSettingsData.vSync), nameof(GraphicsSettingsData.targetFrameRate),
                 nameof(GraphicsSettingsData.qualityLevel), nameof(GraphicsSettingsData.antialiasing),
                 nameof(GraphicsSettingsData.uiTheme), nameof(GraphicsSettingsData.environmentQuality),
+                nameof(GraphicsSettingsData.detailMap), nameof(GraphicsSettingsData.detailMapSource),
+                nameof(GraphicsSettingsData.detailMapMaxZoom), nameof(GraphicsSettingsData.detailMapDiskCache),
             };
             SettingsFormBuilder.Build(p, _graphics, MarkDirty, f => !handled.Contains(f.Name));
 
@@ -496,6 +526,145 @@ namespace ZellSimulation.UI
             field.labelElement.style.width = 250;
         }
 
+        // ---------------------------------------------------------------- Presets
+        void BuildPresetTab(VisualElement p)
+        {
+            SimulationPreset active = PresetLibrary.Find(_presetId);
+            Label state = ZsUiKit.MakeText(active != null
+                    ? "Geladen: " + active.displayName + (_dirty ? " (noch nicht gespeichert)" : "")
+                    : "Aktuell: eigene Einstellungen", 15, ZsUiKit.GoldLight, true);
+            state.style.marginTop = 6;
+            p.Add(state);
+            Label how = ZsUiKit.MakeText(_manager != null
+                    ? "„Laden“ übernimmt alle Werte sofort; Werte mit * (z. B. Startpopulation) wirken erst nach „Laden & neu starten“. " +
+                      "„Speichern“ unten sichert die Auswahl dauerhaft."
+                    : "„Laden“ übernimmt alle Werte für den nächsten Start. „Speichern“ unten sichert die Auswahl dauerhaft. " +
+                      "Im Hauptmenü kann das Szenario auch direkt über „Szenario“ gewählt werden.",
+                12, ZsUiKit.TextMuted);
+            how.style.whiteSpace = WhiteSpace.Normal;
+            how.style.marginBottom = 6;
+            p.Add(how);
+
+            bool userHeader = false;
+            foreach (SimulationPreset preset in PresetLibrary.All)
+            {
+                if (preset.isUserPreset && !userHeader)
+                {
+                    p.Add(SettingsFormBuilder.MakeHeader("Eigene Presets"));
+                    userHeader = true;
+                }
+                p.Add(PresetCard(preset, preset.id == _presetId));
+            }
+
+            // Eigenes Preset speichern
+            p.Add(SettingsFormBuilder.MakeHeader("Aktuelle Werte als eigenes Preset speichern"));
+            var nameField = new TextField("Name") { value = "" };
+            nameField.tooltip = "Name des Presets (gleicher Name überschreibt ein vorhandenes eigenes Preset).";
+            StyleBuiltIn(nameField);
+            p.Add(nameField);
+            var descField = new TextField("Beschreibung") { value = "", multiline = true };
+            descField.tooltip = "Optionale Beschreibung des Szenarios.";
+            StyleBuiltIn(descField);
+            p.Add(descField);
+            var saveRow = new VisualElement();
+            saveRow.style.flexDirection = FlexDirection.Row;
+            saveRow.style.alignItems = Align.Center;
+            saveRow.style.marginTop = 6;
+            Label result = ZsUiKit.MakeText("", 12, ZsUiKit.TextMuted);
+            result.style.flexGrow = 1;
+            Button save = ZsUiKit.MakeButton("Als Preset speichern", () =>
+            {
+                SimulationPreset saved = PresetLibrary.SaveUserPreset(nameField.value, descField.value, _sim);
+                if (saved == null) { result.text = "Speichern fehlgeschlagen (siehe Konsole)."; return; }
+                _presetId = saved.id;
+                Select(_current);
+            }, false, 220f);
+            save.tooltip = "Speichert ALLE aktuellen Simulationswerte als eigenes Preset im Benutzerordner (" + PresetLibrary.UserFolder + ").";
+            saveRow.Add(save);
+            saveRow.Add(result);
+            p.Add(saveRow);
+        }
+
+        VisualElement PresetCard(SimulationPreset preset, bool isActive)
+        {
+            var card = new VisualElement();
+            card.style.marginTop = 6;
+            card.style.paddingLeft = 12;
+            card.style.paddingRight = 10;
+            card.style.paddingTop = 8;
+            card.style.paddingBottom = 8;
+            card.style.backgroundColor = ZsUiKit.Overlay(isActive ? 0.07f : 0.03f);
+            ZsUiKit.SetRadius(card, 6f);
+            ZsUiKit.SetBorder(card, isActive ? 2f : 1f, isActive ? ZsUiKit.GoldLight : ZsUiKit.Overlay(0.12f));
+            card.tooltip = PresetLibrary.Tooltip(preset);
+
+            var head = new VisualElement();
+            head.style.flexDirection = FlexDirection.Row;
+            head.style.alignItems = Align.Center;
+            Label name = ZsUiKit.MakeText(preset.displayName + (isActive ? "  ✓" : ""), 16, isActive ? ZsUiKit.GoldLight : ZsUiKit.Text, true);
+            name.style.flexGrow = 1;
+            head.Add(name);
+            Button load = ZsUiKit.MakeButton("Laden", () => LoadPreset(preset, false), !isActive, 120f);
+            load.tooltip = "Übernimmt alle Werte dieses Presets" + (_manager != null ? " sofort in die laufende Simulation." : " für den nächsten Start.");
+            head.Add(load);
+            if (_manager != null)
+            {
+                Button restart = ZsUiKit.MakeButton("Laden & neu starten", () => LoadPreset(preset, true), false, 200f);
+                restart.style.marginLeft = 6;
+                restart.tooltip = "Übernimmt das Preset, speichert es und startet die Simulation mit seinen Startbedingungen neu.";
+                head.Add(restart);
+            }
+            if (preset.isUserPreset)
+            {
+                Button del = ZsUiKit.MakeButton("Löschen", () =>
+                {
+                    if (PresetLibrary.DeleteUserPreset(preset))
+                    {
+                        if (_presetId == preset.id) _presetId = "";
+                        Select(_current);
+                    }
+                }, false, 110f);
+                del.style.marginLeft = 6;
+                del.tooltip = "Löscht dieses eigene Preset endgültig.";
+                head.Add(del);
+            }
+            card.Add(head);
+
+            if (!string.IsNullOrEmpty(preset.description))
+            {
+                Label desc = ZsUiKit.MakeText(preset.description, 13, ZsUiKit.Text);
+                desc.style.whiteSpace = WhiteSpace.Normal;
+                desc.style.marginTop = 2;
+                card.Add(desc);
+            }
+            Label changes = ZsUiKit.MakeText(string.Join(" · ", preset.DescribeChanges(12)), 11, ZsUiKit.TextMuted);
+            changes.style.whiteSpace = WhiteSpace.Normal;
+            changes.style.marginTop = 3;
+            card.Add(changes);
+            return card;
+        }
+
+        void LoadPreset(SimulationPreset preset, bool restart)
+        {
+            _sim = preset.Build(_sim);
+            _presetId = preset.id;
+            MarkDirty();
+            if (restart && _manager != null)
+            {
+                ApplyAndRestart();
+                return;
+            }
+            Select(_current);
+        }
+
+        /// <summary>Kennung des Presets, dem die Arbeitswerte genau entsprechen ("" = eigene Einstellungen).</summary>
+        string MatchingPresetId()
+        {
+            SimulationPreset p = PresetLibrary.Find(_presetId);
+            if (p == null) return "";
+            return JsonUtility.ToJson(p.Build(_sim)) == JsonUtility.ToJson(_sim) ? p.id : "";
+        }
+
         // ---------------------------------------------------------------- Reiche
         void BuildKingdomTab(VisualElement p)
         {
@@ -532,7 +701,7 @@ namespace ZellSimulation.UI
         {
             _liveItem?.Pause();
             LiveApply();
-            UserSettings.SetSimulation(_sim);
+            UserSettings.CommitSimulation(_sim, MatchingPresetId());
             UserSettings.Save();
             TakeSnapshot();
             ClearDirty("Gespeichert.");
@@ -545,6 +714,7 @@ namespace ZellSimulation.UI
             _graphics = Clone(_savedGraphics);
             _controls = Clone(_savedControls);
             if (_savedSim != null) _sim = _savedSim.Clone();
+            _presetId = _savedPresetId;
             ZsInput.CancelRebind();
             ZsInput.LoadOverrides(_controls.bindingOverrides);
             LiveApply();

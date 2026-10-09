@@ -83,7 +83,9 @@ namespace ZellSimulation.UI
             style.left = leftOffset;
             style.right = rightOffset;
             style.top = 12;
+            style.bottom = 12; // feste Höhe → die Karte begrenzt sich auf den Bildschirm und scrollt
             style.alignItems = Align.Center;
+            style.justifyContent = Justify.FlexStart;
             style.display = DisplayStyle.None;
             pickingMode = PickingMode.Ignore;
 
