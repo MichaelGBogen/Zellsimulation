@@ -1,0 +1,21 @@
+ZellSimulation – Erd-Texturen
+=============================
+
+Lege hier equirektanguläre Erdbilder (Seitenverhältnis 2:1) ab. Dateiname ohne Endung zählt:
+
+  earth_day      Tagesansicht            (Pflicht für die echte Erde)
+  earth_night    Nachtlichter der Städte
+  earth_clouds   Wolken (Graustufen)
+  earth_water    Wassermaske / Specular-Map, Wasser hell (optional)
+
+Format: JPG, PNG oder TIF, empfohlen 4K (4096 x 2048) oder 8K.
+
+Quellen:
+  - NASA Visible Earth: "Blue Marble" (Tag), "Black Marble" / Earth at Night (Nacht)
+  - Solar System Scope Textures (solarsystemscope.com/textures):
+      Earth Day Map -> earth_day, Earth Night Map -> earth_night,
+      Earth Clouds -> earth_clouds, Earth Specular Map -> earth_water
+    Lizenz CC BY 4.0 – Quellenangabe erforderlich (steht in der Hilfe unter "Über ZellSimulation").
+
+Ohne Dateien erzeugt ZellSimulation eine erdähnliche Kugel mit zufälligen Kontinenten.
+Unity-Menü: Tools > ZellSimulation > Erd-Texturen (Ordner & Anleitung).

@@ -1,0 +1,11 @@
+ZellSimulation – Quellen der Erd-Texturen
+=========================================
+
+earth_day.jpg     NASA Blue Marble (NASA Earth Observatory / Visible Earth), gemeinfrei.
+earth_night.jpg   NASA Black Marble / Earth at Night (NASA Earth Observatory), gemeinfrei.
+                  Für ZellSimulation aufbereitet: nur die Stadtlichter (warm getönt), Ozean-Hintergrund entfernt.
+earth_water.png   Land/Wasser-Maske (Wasser weiß).
+earth_clouds.jpg  Wolken aus turban/webgl-earth (Bjørn Sandvik, auf Basis von NASA-Bildern).
+                  Für ZellSimulation aufbereitet: Wolkendichte als Graustufen.
+
+Bezogen über das npm-Paket "three-globe" 2.45.3 (Vasco Asturiano, MIT-Lizenz), Ordner example/img und example/clouds.
