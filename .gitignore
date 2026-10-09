@@ -1,0 +1,55 @@
+# =============================================================================
+#  ZellSimulation – Git-Ausschlüsse für das Unity-Projekt (Unity 6 / HDRP)
+#  Diese Ordner und Dateien erzeugt Unity bzw. die IDE selbst neu.
+# =============================================================================
+
+# Von Unity erzeugt
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# Build-Ausgaben und Absturzberichte
+*.apk
+*.aab
+*.unitypackage
+*.app
+crashlytics-build.properties
+sysinfo.txt
+
+# Asset Store Tools
+/[Aa]ssets/AssetStoreTools*
+
+# Von Visual Studio / Rider / VS Code erzeugt
+.vs/
+.idea/
+.vscode/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Meta-Dateien zu ausgeschlossenen Dateien
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Betriebssystem
+.DS_Store
+Thumbs.db
+Desktop.ini

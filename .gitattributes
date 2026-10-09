@@ -1,0 +1,68 @@
+# =============================================================================
+#  ZellSimulation – Git-Attribute
+#  • Text: einheitliche Zeilenenden (Unity schreibt LF), Diffs für YAML-Assets
+#  • Binärdateien: als binary markiert (kein Zeilenend-Umbau, kein Text-Diff).
+#    Für große Dateien kann später Git LFS genutzt werden: in den Zeilen unten
+#    „binary“ durch „binary“ ersetzen und
+#    „git lfs install“ + „git add --renormalize .“ ausführen.
+# =============================================================================
+
+* text=auto
+
+# Code und Text
+*.cs        text diff=csharp
+*.shader    text
+*.hlsl      text
+*.cginc     text
+*.compute   text
+*.uss       text
+*.uxml      text
+*.tss       text
+*.json      text
+*.md        text
+*.txt       text
+*.cmd       text eol=crlf
+*.bat       text eol=crlf
+
+# Unity-YAML (Asset Serialization: Force Text)
+*.unity       text eol=lf linguist-generated
+*.prefab      text eol=lf linguist-generated
+*.asset       text eol=lf linguist-generated
+*.mat         text eol=lf linguist-generated
+*.meta        text eol=lf linguist-generated
+*.controller  text eol=lf linguist-generated
+*.anim        text eol=lf linguist-generated
+*.physicMaterial text eol=lf linguist-generated
+*.lighting    text eol=lf linguist-generated
+*.preset      text eol=lf linguist-generated
+
+# Bilder
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.tga  binary
+*.tif  binary
+*.tiff binary
+*.psd  binary
+*.exr  binary
+*.hdr  binary
+*.gif  binary
+
+# 3D-Modelle
+*.fbx   binary
+*.obj   binary
+*.blend binary
+*.glb   binary
+
+# Audio und Video
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.mp4 binary
+
+# Schriften und Bibliotheken
+*.ttf binary
+*.otf binary
+*.dll binary
+*.so  binary
+*.a   binary
