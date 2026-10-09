@@ -21,6 +21,8 @@
 *.json      text
 *.md        text
 *.txt       text
+*.cmd       text eol=crlf
+*.bat       text eol=crlf
 
 # Unity-YAML (Asset Serialization: Force Text)
 *.unity       text eol=lf linguist-generated

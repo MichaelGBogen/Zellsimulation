@@ -340,6 +340,13 @@ Repository: https://github.com/MichaelGBogen/Zellsimulation – das Unity-Projek
 * **`.gitattributes`** (Repository-Wurzel): einheitliche Zeilenenden, Unity-YAML als Text; Bilder, Modelle, Audio, Schriften und DLLs als `binary`.
   Bei vielen großen Dateien später auf **Git LFS** umstellen (Anleitung im Kopf der `.gitattributes`).
 
+**Skripte im Projektordner (Doppelklick):**
+
+| Datei | Wirkung |
+|---|---|
+| `Git_Commit.cmd` | Alle Änderungen committen (Nachricht abfragen, Enter = Standardtext) und nach GitHub pushen. Vorher in Unity *File › Save Project*. |
+| `Git_Aktualisieren.cmd` | Neueste Version holen (`git pull --rebase`); eigene, nicht committete Änderungen werden vorübergehend gesichert und wieder eingespielt. |
+
 ## 2. Ordnerstruktur
 
 ```
