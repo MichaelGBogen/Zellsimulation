@@ -333,7 +333,7 @@ Spielfeld-Panel (links), Navigation der Einstellungen, Auswertung (Taste G) und 
 vertikale Scrollleiste – aufgeklappte Untergruppen, Verhaltens-Chips und Diagramme bleiben so vollständig erreichbar.
 
 ## 1i. Versionsverwaltung (Git)
-Repository: https://github.com/MichaelGBogen/Zellsimulation – Unity-Projekt im Unterordner `ZellSimulation/`.
+Repository: https://github.com/MichaelGBogen/Zellsimulation – das Unity-Projekt liegt direkt in der Wurzel (`Assets`, `Packages`, `ProjectSettings`), lokal z. B. unter `C:\Projects\Unity\ZellSimulation`.
 
 * **Unity einstellen:** *Project Settings › Version Control*: Mode = **Visible Meta Files**; *Editor › Asset Serialization* = **Force Text**.
 * **`.gitignore`** (im Projektordner): `Library`, `Temp`, `Obj`, `Logs`, `UserSettings`, Builds sowie die von Unity erzeugten `*.csproj`/`*.sln` werden nicht versioniert (Unity erzeugt sie neu).
